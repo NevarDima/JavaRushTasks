@@ -1,0 +1,4 @@
+string 1
+stroka 2
+drugoe slovo 3
+byte 4
