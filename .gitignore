@@ -1,0 +1,25 @@
+#############
+## Idea
+#############
+target/
+.idea/
+.idea
+.repository/
+*.DS_Store
+/*.xml
+/*/*.xml
+*.iml
+*.iws
+*.jrtc
+*.info
+*.properties
+*.jar
+*.class
+*.war
+*.ear
+*.log
+
+/JavaRushPlugin.properties
+/Instruction.png
+/out.log
+/out.log.*
