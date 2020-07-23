@@ -3,7 +3,7 @@ package com.javarush.games.spaceinvaders.gameobjects;
 import com.javarush.engine.cell.*;
 
 public class Star extends GameObject{
-    private static final String STAR_SIGN = "\\u2605";
+    private static final String STAR_SIGN = "\u2605";
 
     public Star(double x, double y) {
         super(x, y);
