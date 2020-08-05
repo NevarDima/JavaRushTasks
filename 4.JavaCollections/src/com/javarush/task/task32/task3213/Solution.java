@@ -1,5 +1,6 @@
 package com.javarush.task.task32.task3213;
 
+import java.io.BufferedReader;
 import java.io.IOException;
 import java.io.StringReader;
 
@@ -14,7 +15,15 @@ public class Solution {
     }
 
     public static String decode(StringReader reader, int key) throws IOException {
-
-        return null;
+        if(reader == null){
+            return "";
+        }
+        BufferedReader br = new BufferedReader(reader);
+        StringBuilder sb = new StringBuilder();
+        int letter;
+        while((letter = br.read()) != -1){
+            sb.append((char) (letter+key));
+        }
+        return sb.toString();
     }
 }
