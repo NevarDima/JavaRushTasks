@@ -1,14 +1,14 @@
 package com.javarush.task.task34.task3404;
 
-import java.math.BigDecimal;
 import java.math.RoundingMode;
 import java.text.DecimalFormat;
 import java.text.NumberFormat;
-import java.util.*;
+import java.util.LinkedList;
+import java.util.Locale;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
-/* 
+/*
 Рекурсия для мат. выражения
 */
 
@@ -18,155 +18,285 @@ public class Solution {
         solution.recurse("sin(2*(-5+1.5*4)+28)", 0);
     }
 
-    public void recurse(final String expression, int countOperation) {
-        //implement
-        String inExpression = expression.replaceAll("\\s", "");
-        inExpression = inExpression.replaceAll("tan","t");
-        inExpression = inExpression.replaceAll("sin","s");
-        inExpression = inExpression.replaceAll("cos","c");
-        NumberFormat numberFormat = new DecimalFormat("#.##");
-        if(inExpression.matches("^-?\\d+(\\.\\d+)?")){
-            if(inExpression.equals("-0")){
-                inExpression = "0";
-                countOperation++;
+    private double makeOperation(String s, double first, double second) {
+        switch (s) {
+            case "+": {
+                return first + second;
             }
-            System.out.println(numberFormat.format(Double.parseDouble(inExpression)).replace(",",".") + " " + countOperation);
-            return;
+            case "=": {
+                return 0.0 - second;
+            }
+            case "%": {
+                return 0.0 - second;
+            }
+            case "-": {
+                return first - second;
+            }
+            case "@": {
+                return first - second;
+            }
+            case "*": {
+                return first * second;
+            }
+            case "/": {
+                return first / second;
+            }
+            case "^": {
+                return Math.pow(first, second);
+            }
+            default:
+                return -1;
         }
+    }
 
-        if(countOperation == 0){
-            for (char ch : inExpression.toCharArray()){
-                if(ch == 'c' || ch == 's' || ch == 't' || ch == '/' || ch == '*' || ch == '+' || ch == '-' || ch == '^'){
-                    countOperation++;
-                }
+    private double makeFunction(String s, double first) {
+        switch (s) {
+            case "s": {
+                return Math.sin(Math.toRadians(first));
+            }
+            case "c": {
+                return Math.cos(Math.toRadians(first));
+            }
+            case "t": {
+                return Math.tan(Math.toRadians(first));
+            }
+
+            default:
+                return -1;
+        }
+    }
+
+    private int getPriority(String s) {
+        switch (s) {
+            case "+":
+            case "-":
+            case "=":
+            case "%":
+            case "@":
+                return 1;
+            case "*":
+            case "/":
+                return 2;
+            case "^":
+                return 3;
+            case "c":
+            case "s":
+            case "t":
+                return 4;
+            default:
+                return -1;
+        }
+    }
+
+    private boolean isOperator(String c) {
+        return c.equals("+") || c.equals("-") || c.equals("@") || c.equals("%") || c.equals("=") || c.equals("*") || c.equals("/") || c.equals("^");
+    }
+
+    private boolean isFunction(String c) {
+        return c.equals("s") || c.equals("c") || c.equals("t");
+    }
+
+    private String doSomething(String expression) {
+        NumberFormat numberFormat = NumberFormat.getNumberInstance(Locale.ENGLISH);
+        numberFormat.setRoundingMode(RoundingMode.HALF_EVEN);
+        DecimalFormat df = (DecimalFormat) numberFormat;
+        df.applyPattern("#.##");
+        LinkedList<Double> doubles = new LinkedList<>();
+        StringBuilder sb = new StringBuilder();
+        String workWith = expression.replaceAll("(S|s)(I|i)(N|n)", "s");//Заменяем все функции на одиночный аналог
+        workWith = workWith.replaceAll("[Cc][Oo][Ss]", "c");//Заменяем все функции на одиночный аналог
+        workWith = workWith.replaceAll("[Tt][Aa][Nn]", "t");//Заменяем все функции на одиночный аналог
+        //посчитаем количество операций
+        workWith = workWith.replaceAll("^-", "=");
+        for (int i = 0; i < 2; i++) {
+            Pattern binaryMinus = Pattern.compile("(\\d+\\s?-\\s?\\d+)|([cst]\\s?-\\s?\\d)|(\\d\\s?-\\s?[cst])" +
+                    "|([cst]\\s?-\\s?[cst])|(\\)\\s?-\\s?\\()|(\\d+\\s?-\\s?\\()" +
+                    "|(\\)\\s?-\\s?\\d+)|([cst]\\s?-\\s?\\()|(\\)\\s?-\\s?[cst])");
+            Matcher minusMatcher = binaryMinus.matcher(workWith);
+            while (minusMatcher.find()) {
+                String group = minusMatcher.group();
+                String newString = group.replace('-', '@');
+                workWith = workWith.replace(group, newString);
             }
         }
-
-        String subExpression = inExpression;
-        String leftPart = "";
-        String rightPart = "";
-        if(inExpression.contains("(")) {
-            int indexLastOpenBracket = inExpression.lastIndexOf('(');
-            int indexFirstCloseBracket = 0;
-            for (int i = indexLastOpenBracket+1; i < inExpression.length(); i++) {
-                if(inExpression.charAt(i) == ')'){
-                    indexFirstCloseBracket = i;
-                    break;
-                }
-            }
-            subExpression = inExpression.substring(indexLastOpenBracket+1,indexFirstCloseBracket);
-            leftPart = inExpression.substring(0,indexLastOpenBracket);
-            rightPart = inExpression.substring(indexFirstCloseBracket+1);
+        Pattern strange = Pattern.compile("[^\\d)]\\s?\\-\\s?[\\dcst\\(]");
+        Matcher mimi = strange.matcher(workWith);
+        while (mimi.find()) {
+            String lookfor = mimi.group();
+            String replTo = lookfor.replace("-", "%");
+            workWith = workWith.replace(lookfor, replTo);
         }
-
-
-        List<String> operandString = new ArrayList<>(Arrays.asList(subExpression.split("[-+*^/]")));
-        for (int i = 0; i < operandString.size(); i++) {
-            if(operandString.get(i).equals("")){
-                operandString.remove(i);
-                operandString.set(i,"-"+operandString.get(i));
-                if(operandString.get(i).equals("-")){
-                    operandString.remove(i);
-                }
+        int numberOfOperations = 0;
+        if (numberOfOperations == 0) {
+            Pattern operation = Pattern.compile("[sct\\+\\-\\*/\\^=%@]");
+            Matcher matcher = operation.matcher(workWith);
+            while (matcher.find()) {
+                numberOfOperations++;
             }
         }
-        List<String> operation = new ArrayList<>(Arrays.asList(subExpression.split("[a-z]|\\d+\\.\\d+|[0-9]+")));
-        if(!operation.isEmpty()){
-            operation.remove(0);
-            for (int i = 0; i < operation.size(); i++) {
-                if(operation.get(i).equals("+-")){
-                    operation.set(i,"+");
-                }else if(operation.get(i).equals("/-")){
-                    operation.set(i,"/");
-                }else if(operation.get(i).equals("*-")){
-                    operation.set(i,"*");
-                }else if(operation.get(i).equals("--")){
-                    operation.set(i,"-");
-                }else if(operation.get(i).equals("^-")){
-                    operation.set(i,"^");
-                }else if(operation.get(i).equals("")){
-                    operation.remove(i);
-                }
+        //в следующем блоке заменяем все цифры символом D
+        Pattern compareWithDecimals = Pattern.compile("-?((\\d*\\.\\d*([eE][\\+\\-]?\\d+)?)|\\d+)");
+        Matcher m = compareWithDecimals.matcher(workWith);
+        while (m.find()) {
+            String ourDouble = m.group();
+            doubles.add(new Double(ourDouble));
+            workWith = workWith.replaceFirst(ourDouble, "D");
+        }
+        workWith = workWith.replaceAll(" ", "");
+        String[] p = workWith.split("");
+        LinkedList<String> operators = new LinkedList<>();
+        LinkedList<Double> d = new LinkedList<>();
+        for (int i = 0; i < p.length; i++) {
+            if (p[i].equals("D")) {
+                d.add(doubles.removeFirst());
             }
-        }
-
-        List<Double> operand = new ArrayList<>();
-        for (int i = 0; i < operandString.size(); i++) {
-            operand.add(Double.parseDouble(operandString.get(i)));
-        }
-
-        if(operation.contains("^")) {
-            while (operation.contains("^")) {
-                int index = operation.indexOf("^");
-                double result;
-                if(operand.get(index+1)>0) {
-                    result = Math.pow(operand.get(index), operand.get(index + 1));
-                }else if(operand.get(index+1)==0){
-                    result = 1;
-                }else{
-                    if(operand.get(index)>=0) {
-                        result = 1 / Math.pow(operand.get(index), operand.get(index + 1) * (-1));
-                    }else{
-                        result = -1 / Math.pow(operand.get(index), operand.get(index + 1) * (-1));
+            if (isFunction(p[i]) || isOperator(p[i])) {
+                if (operators.size() == 0) {
+                    operators.add(p[i]);
+                    continue;
+                } else {
+                    String lastOper = operators.getLast();
+                    int lastOperPriority = getPriority(lastOper);
+                    int thisPriority = getPriority(p[i]);
+                    while (thisPriority <= lastOperPriority && operators.size() > 0) {
+                        if (thisPriority == 3 && lastOperPriority == thisPriority) {
+                            operators.add(p[i]);
+                            break;
+                        }
+                        Double res = 0.0;
+                        String operation = operators.removeLast();
+                        if (operation.equals("=") || operation.equals("%")) {
+                            Double d2 = d.removeLast();
+                            res = makeOperation(operation, 0.0, d2);
+                            res = new Double(df.format(res));
+                            d.add(res);
+                            if (operators.size() > 0) {
+                                lastOperPriority = getPriority(operators.getLast());
+                            } else {
+                                lastOperPriority = -1;
+                            }
+                            continue;
+                        }
+                        Double d2;
+                        Double d1 = 0.0;
+                        if (isOperator(operation)) {
+                            d2 = d.removeLast();
+                            if (d.size() > 0) {
+                                d1 = d.removeLast();
+                            }
+                            res = makeOperation(operation, d1, d2);
+                        }
+                        if (isFunction(operation)) {
+                            d2 = d.removeLast();
+                            res = makeFunction(operation, d2);
+                        }
+                        res = new Double(df.format(res));
+                        d.add(res);
+                        if (operators.size() > 0) {
+                            lastOperPriority = getPriority(operators.getLast());
+                        } else {
+                            lastOperPriority = -1;
+                        }
                     }
                 }
-                operand.set(index, result);
-                operand.remove(index + 1);
-                operation.remove(index);
+                operators.add(p[i]);
             }
-        }
 
-        for (int i = 0; i < operation.size(); i++) {
-            if(operation.get(i).equals("/")){
-                double result = operand.get(i) / operand.get(i+1);
-                operand.set(i, result);
-                operand.remove(i + 1);
-                operation.remove(i);
-                i--;
-            }else if(operation.get(i).equals("*")){
-                double result = operand.get(i) * operand.get(i+1);
-                operand.set(i, result);
-                operand.remove(i + 1);
-                operation.remove(i);
-                i--;
+            if (p[i].equals("(")) {
+                operators.add(p[i]);
             }
-        }
+            if (p[i].equals(")")) {
+                String operation = "";
+                while (!(operation = operators.removeLast()).equals("(")) {
+                    Double res = 0.0;
+                    Double d2;
+                    if (operation.equals("=") || operation.equals("%")) {
+                        d2 = d.removeLast();
+                        res = makeOperation(operation, 0.0, d2);
+                        res = new Double(df.format(res));
+                        d.add(res);
+                        continue;
+                    }
+                    Double d1 = 0.0;
 
-        if(operation.contains("-")) {
-            while (operation.contains("-")) {
-                int index = operation.indexOf("-");
-                double result = operand.get(index) - operand.get(index+1);
-                operand.set(index, result);
-                operand.remove(index + 1);
-                operation.remove(index);
-            }
-        }
-
-        if(operation.contains("+")) {
-            while (operation.contains("+")) {
-                int index = operation.indexOf("+");
-                double result = operand.get(index) + operand.get(index+1);
-                operand.set(index, result);
-                operand.remove(index + 1);
-                operation.remove(index);
-            }
-        }
-
-        if(operation.isEmpty() && operand.size() == 1){
-            if(!leftPart.equals("")) {
-                if (leftPart.substring(leftPart.length() - 1).equals("t")) {
-                    leftPart = leftPart.substring(0, leftPart.length() - 1);
-                    operand.set(0, Math.tan(Math.toRadians(operand.get(0))));
-                } else if (leftPart.substring(leftPart.length() - 1).equals("c")) {
-                    leftPart = leftPart.substring(0, leftPart.length() - 1);
-                    operand.set(0, Math.cos(Math.toRadians(operand.get(0))));
-                } else if (leftPart.substring(leftPart.length() - 1).equals("s")) {
-                    leftPart = leftPart.substring(0, leftPart.length() - 1);
-                    operand.set(0, Math.sin(Math.toRadians(operand.get(0))));
+                    if (isOperator(operation)) {
+                        d2 = d.removeLast();
+                        if (d.size() > 0) {
+                            d1 = d.removeLast();
+                        }
+                        res = makeOperation(operation, d1, d2);
+                    }
+                    if (isFunction(operation)) {
+                        d2 = d.removeLast();
+                        res = makeFunction(operation, d2);
+                    }
+                    res = new Double(df.format(res));
+                    d.add(res);
                 }
             }
-            recurse(leftPart + new BigDecimal(operand.get(0)).toPlainString() + rightPart, countOperation);
         }
+        String operation = "";
+        while (operators.size() != 0) {
+            operation = operators.removeLast();
+            Double d2;
+            Double res = 0.0;
+            if (operation.equals("=") || operation.equals("%")) {
+                d2 = d.removeLast();
+                res = makeOperation(operation, 0.0, d2);
+                res = new Double(df.format(res));
+                d.add(res);
+                continue;
+            }
+            Double d1 = 0.0;
+            if (isOperator(operation)) {
+                d2 = d.removeLast();
+                if (d.size() > 0) {
+                    d1 = d.removeLast();
+                }
+                res = makeOperation(operation, d1, d2);
+            }
+            if (isFunction(operation)) {
+                d2 = d.removeLast();
+                res = makeFunction(operation, d2);
+            }
+            res = new Double(df.format(res));
+            d.add(res);
+        }
+        sb = new StringBuilder();
+        sb.append(d.get(0));
+        for (int i = 0; i < numberOfOperations; i++) {
+            sb.append("!");
+        }
+        sb.append(" ");
+        sb.append(numberOfOperations);
+        String result = sb.toString();
+        return result;
+    }
+
+    public void recurse(final String expression, int countOperation) {
+        String result = "";
+        int count = countOperation;
+        Pattern compareWithDecimalss = Pattern.compile("^-?((\\d*\\.\\d*([eE][\\+\\-]?\\d+)?)|\\d+)$");
+        Matcher mmm = compareWithDecimalss.matcher(expression);
+        if (mmm.matches()) {
+            Double d = new Double(expression);
+            NumberFormat numberFormat = NumberFormat.getNumberInstance(Locale.ENGLISH);
+            numberFormat.setRoundingMode(RoundingMode.HALF_EVEN);
+            DecimalFormat df = (DecimalFormat) numberFormat;
+            df.applyPattern("#.##");
+            String stringWeNeed = df.format(d);
+            System.out.println(stringWeNeed + " " + countOperation);
+            return;
+        }
+        if (!expression.contains("!")) {
+            String strinny = doSomething(expression);
+            String[] ss = strinny.split(" ");
+            result = ss[0];
+            count = Integer.parseInt(ss[1].trim());
+        } else {
+            result = expression.replaceFirst("!", "");
+        }
+        recurse(result, count);
 
     }
 
